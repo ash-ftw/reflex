@@ -14,7 +14,134 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      checkins: {
+        Row: {
+          ai_insight: string | null
+          ai_summary: string | null
+          confidence_level: number | null
+          created_at: string
+          energy_level: number | null
+          entry_text: string
+          id: string
+          is_crisis: boolean
+          primary_emotion: string | null
+          stress_level: number | null
+          triggers: string[] | null
+          user_id: string
+        }
+        Insert: {
+          ai_insight?: string | null
+          ai_summary?: string | null
+          confidence_level?: number | null
+          created_at?: string
+          energy_level?: number | null
+          entry_text: string
+          id?: string
+          is_crisis?: boolean
+          primary_emotion?: string | null
+          stress_level?: number | null
+          triggers?: string[] | null
+          user_id: string
+        }
+        Update: {
+          ai_insight?: string | null
+          ai_summary?: string | null
+          confidence_level?: number | null
+          created_at?: string
+          energy_level?: number | null
+          entry_text?: string
+          id?: string
+          is_crisis?: boolean
+          primary_emotion?: string | null
+          stress_level?: number | null
+          triggers?: string[] | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      microtasks: {
+        Row: {
+          category: string | null
+          checkin_id: string
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          duration_minutes: number | null
+          id: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          checkin_id: string
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          checkin_id?: string
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "microtasks_checkin_id_fkey"
+            columns: ["checkin_id"]
+            isOneToOne: false
+            referencedRelation: "checkins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          age_range: string | null
+          communication_style: string | null
+          created_at: string
+          display_name: string | null
+          goals: string[] | null
+          id: string
+          occupation: string | null
+          onboarding_completed: boolean
+          updated_at: string
+        }
+        Insert: {
+          age_range?: string | null
+          communication_style?: string | null
+          created_at?: string
+          display_name?: string | null
+          goals?: string[] | null
+          id: string
+          occupation?: string | null
+          onboarding_completed?: boolean
+          updated_at?: string
+        }
+        Update: {
+          age_range?: string | null
+          communication_style?: string | null
+          created_at?: string
+          display_name?: string | null
+          goals?: string[] | null
+          id?: string
+          occupation?: string | null
+          onboarding_completed?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

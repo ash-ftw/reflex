@@ -1,28 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { generateText, Output } from "ai";
 import { z } from "zod";
 
 const CRISIS_KEYWORDS = [
   "suicide", "suicidal", "kill myself", "end my life", "want to die",
   "self harm", "self-harm", "hurt myself", "no reason to live",
 ];
-
-const AnalysisSchema = z.object({
-  primary_emotion: z.string().describe("Single word: stress, anxiety, joy, sadness, frustration, calm, motivated, etc"),
-  stress_level: z.number().min(1).max(10),
-  energy_level: z.number().min(1).max(10),
-  confidence_level: z.number().min(1).max(10),
-  triggers: z.array(z.string()).max(5),
-  summary: z.string().describe("One warm, validating sentence reflecting back what the user shared"),
-  insight: z.string().describe("One observation about a pattern or context worth noticing"),
-  micro_tasks: z.array(z.object({
-    title: z.string(),
-    description: z.string(),
-    category: z.enum(["physical", "cognitive", "social", "productivity"]),
-    duration_minutes: z.number().min(1).max(15),
-  })).min(3).max(5).describe("Actionable micro-tasks under 15 min each, tailored to current emotional state"),
-});
 
 export const analyzeCheckin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -32,8 +15,6 @@ export const analyzeCheckin = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const entry = data.entry.trim();
-
-    // Crisis detection (rule-based first pass)
     const lower = entry.toLowerCase();
     const isCrisis = CRISIS_KEYWORDS.some((k) => lower.includes(k));
 
@@ -45,7 +26,7 @@ export const analyzeCheckin = createServerFn({ method: "POST" })
           entry_text: entry,
           is_crisis: true,
           ai_summary: "We noticed something serious in what you shared.",
-          ai_insight: "Please reach out to a trained professional who can support you right now.",
+          ai_insight: "Please reach out to a trained professional right now. You're not alone.",
         })
         .select()
         .single();
@@ -54,9 +35,8 @@ export const analyzeCheckin = createServerFn({ method: "POST" })
     }
 
     const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+    if (!apiKey) throw new Error("AI is not configured.");
 
-    // Pull recent context
     const { data: recent } = await supabase
       .from("checkins")
       .select("created_at, primary_emotion, stress_level, entry_text")
@@ -67,9 +47,27 @@ export const analyzeCheckin = createServerFn({ method: "POST" })
       .map((c) => `- ${new Date(c.created_at).toLocaleDateString()}: ${c.primary_emotion ?? "?"} (stress ${c.stress_level ?? "?"}) — "${c.entry_text.slice(0, 120)}"`)
       .join("\n") || "(no prior check-ins)";
 
-    const gateway = createLovableAiGatewayProvider(apiKey);
+    const { generateText, Output } = await import("ai");
+    const { createLovableAiGatewayProvider } = await import("./ai-gateway.server");
 
-    const prompt = `You are Reflex, an emotional fitness companion. NOT a therapist. Help the user notice patterns and take small actions.
+    const AnalysisSchema = z.object({
+      primary_emotion: z.string(),
+      stress_level: z.number().min(1).max(10),
+      energy_level: z.number().min(1).max(10),
+      confidence_level: z.number().min(1).max(10),
+      triggers: z.array(z.string()).max(5),
+      summary: z.string(),
+      insight: z.string(),
+      micro_tasks: z.array(z.object({
+        title: z.string(),
+        description: z.string(),
+        category: z.enum(["physical", "cognitive", "social", "productivity"]),
+        duration_minutes: z.number().min(1).max(15),
+      })).min(3).max(5),
+    });
+
+    const gateway = createLovableAiGatewayProvider(apiKey);
+    const prompt = `You are Reflex, an emotional fitness companion. You are NOT a therapist. Help the user notice patterns and take small, doable actions.
 
 Recent check-ins:
 ${history}
@@ -77,7 +75,7 @@ ${history}
 Today the user wrote:
 """${entry}"""
 
-Analyze their emotional state and generate 3-5 micro-tasks (each under 15 minutes) that fit how they feel right now. Tasks should be practical and varied across physical, cognitive, social, and productivity categories. Be warm but action-oriented.`;
+Return a JSON analysis of their state and 3-5 micro-tasks (under 15 min each) tailored to how they feel right now. Vary the tasks across physical, cognitive, social and productivity. Tone: warm, grounded, action-oriented. The "summary" should reflect back what they shared in one sentence. The "insight" should name a pattern or context worth noticing.`;
 
     const { experimental_output } = await generateText({
       model: gateway("google/gemini-3-flash-preview"),
@@ -121,10 +119,3 @@ Analyze their emotional state and generate 3-5 micro-tasks (each under 15 minute
 
     return { checkin, tasks: tasks ?? [], crisis: false as const };
   });
-
-function createLovableAiGatewayProvider(key: string) {
-  // dynamic import keeps server-only module isolated from client bundle
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { createLovableAiGatewayProvider: f } = require("./ai-gateway.server");
-  return f(key);
-}

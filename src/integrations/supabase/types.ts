@@ -25,6 +25,9 @@ export type Database = {
           id: string
           is_crisis: boolean
           primary_emotion: string | null
+          resources_helpful: boolean | null
+          safety_responded_at: string | null
+          safety_status: string | null
           stress_level: number | null
           triggers: string[] | null
           user_id: string
@@ -39,6 +42,9 @@ export type Database = {
           id?: string
           is_crisis?: boolean
           primary_emotion?: string | null
+          resources_helpful?: boolean | null
+          safety_responded_at?: string | null
+          safety_status?: string | null
           stress_level?: number | null
           triggers?: string[] | null
           user_id: string
@@ -53,6 +59,9 @@ export type Database = {
           id?: string
           is_crisis?: boolean
           primary_emotion?: string | null
+          resources_helpful?: boolean | null
+          safety_responded_at?: string | null
+          safety_status?: string | null
           stress_level?: number | null
           triggers?: string[] | null
           user_id?: string

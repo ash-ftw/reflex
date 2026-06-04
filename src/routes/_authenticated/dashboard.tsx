@@ -97,7 +97,12 @@ function Dashboard() {
       </section>
 
       {data.latestCheckin?.is_crisis && (
-        <CrisisResources summary={data.latestCheckin.ai_summary} />
+        <CrisisResources
+          checkinId={data.latestCheckin.id}
+          summary={data.latestCheckin.ai_summary}
+          initialSafetyStatus={(data.latestCheckin.safety_status as "safe" | "unsure" | "unsafe" | null) ?? null}
+          initialResourcesHelpful={data.latestCheckin.resources_helpful ?? null}
+        />
       )}
 
       {data.latestCheckin && !data.latestCheckin.is_crisis && (

@@ -2,10 +2,24 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
-const CRISIS_KEYWORDS = [
-  "suicide", "suicidal", "kill myself", "end my life", "want to die",
-  "self harm", "self-harm", "hurt myself", "no reason to live",
+// Phrases tuned for high-recall crisis screening. Word boundaries prevent
+// false positives like "suicide prevention" matching benign discussion.
+const CRISIS_PATTERNS: RegExp[] = [
+  /\bsuicid(e|al)\b/i,
+  /\bkill(ing)?\s+myself\b/i,
+  /\b(end|ending|take)\s+my\s+(own\s+)?life\b/i,
+  /\b(want|wanna|going)\s+to\s+die\b/i,
+  /\bi\s+want\s+to\s+die\b/i,
+  /\b(self[\s-]?harm|cutting\s+myself|hurt(ing)?\s+myself)\b/i,
+  /\bno\s+reason\s+to\s+(live|go on)\b/i,
+  /\b(better\s+off|everyone.+better)\s+(without|dead)\b/i,
+  /\bcan'?t\s+(go on|do this anymore|take it anymore)\b/i,
+  /\b(overdose|jump off|hang myself)\b/i,
 ];
+
+function detectCrisis(text: string): boolean {
+  return CRISIS_PATTERNS.some((re) => re.test(text));
+}
 
 export const analyzeCheckin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

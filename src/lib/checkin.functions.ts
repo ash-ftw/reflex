@@ -2,10 +2,24 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
-const CRISIS_KEYWORDS = [
-  "suicide", "suicidal", "kill myself", "end my life", "want to die",
-  "self harm", "self-harm", "hurt myself", "no reason to live",
+// Phrases tuned for high-recall crisis screening. Word boundaries prevent
+// false positives like "suicide prevention" matching benign discussion.
+const CRISIS_PATTERNS: RegExp[] = [
+  /\bsuicid(e|al)\b/i,
+  /\bkill(ing)?\s+myself\b/i,
+  /\b(end|ending|take)\s+my\s+(own\s+)?life\b/i,
+  /\b(want|wanna|going)\s+to\s+die\b/i,
+  /\bi\s+want\s+to\s+die\b/i,
+  /\b(self[\s-]?harm|cutting\s+myself|hurt(ing)?\s+myself)\b/i,
+  /\bno\s+reason\s+to\s+(live|go on)\b/i,
+  /\b(better\s+off|everyone.+better)\s+(without|dead)\b/i,
+  /\bcan'?t\s+(go on|do this anymore|take it anymore)\b/i,
+  /\b(overdose|jump off|hang myself)\b/i,
 ];
+
+function detectCrisis(text: string): boolean {
+  return CRISIS_PATTERNS.some((re) => re.test(text));
+}
 
 export const analyzeCheckin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -15,18 +29,20 @@ export const analyzeCheckin = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const entry = data.entry.trim();
-    const lower = entry.toLowerCase();
-    const isCrisis = CRISIS_KEYWORDS.some((k) => lower.includes(k));
+    const isCrisis = detectCrisis(entry);
 
     if (isCrisis) {
+      // SAFETY: skip AI task generation entirely. Crisis check-ins must not
+      // be reduced to "micro-actions" — surface human help instead.
       const { data: row, error } = await supabase
         .from("checkins")
         .insert({
           user_id: userId,
           entry_text: entry,
           is_crisis: true,
-          ai_summary: "We noticed something serious in what you shared.",
-          ai_insight: "Please reach out to a trained professional right now. You're not alone.",
+          primary_emotion: "distress",
+          ai_summary: "What you shared sounds really heavy, and we don't want you to face it alone.",
+          ai_insight: "A trained human is better equipped than Reflex for this moment. The resources below are free, confidential, and available right now.",
         })
         .select()
         .single();

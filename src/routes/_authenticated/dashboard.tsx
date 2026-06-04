@@ -2,10 +2,11 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Send, Sparkles, Activity, CheckCircle2, Circle, AlertTriangle, Brain, Zap, Loader2 } from "lucide-react";
+import { Send, Sparkles, Activity, CheckCircle2, Circle, Brain, Zap, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { analyzeCheckin } from "@/lib/checkin.functions";
 import { getDashboardData, toggleTask } from "@/lib/tasks.functions";
+import { CrisisResources } from "@/components/CrisisResources";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Today — Reflex" }] }),
@@ -96,18 +97,7 @@ function Dashboard() {
       </section>
 
       {data.latestCheckin?.is_crisis && (
-        <section className="rounded-2xl border border-destructive/40 bg-destructive/10 p-6">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 shrink-0 text-destructive" />
-            <div>
-              <h3 className="font-display text-lg font-semibold">Please reach out for support</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                What you shared sounds serious. Reflex is not a crisis service. If you're in the US, call or text <strong className="text-foreground">988</strong>. Outside the US, find a helpline at{" "}
-                <a className="underline" href="https://findahelpline.com" target="_blank" rel="noreferrer">findahelpline.com</a>.
-              </p>
-            </div>
-          </div>
-        </section>
+        <CrisisResources summary={data.latestCheckin.ai_summary} />
       )}
 
       {data.latestCheckin && !data.latestCheckin.is_crisis && (

@@ -2,10 +2,11 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Send, Sparkles, Activity, CheckCircle2, Circle, AlertTriangle, Brain, Zap, Loader2 } from "lucide-react";
+import { Send, Sparkles, Activity, CheckCircle2, Circle, Brain, Zap, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { analyzeCheckin } from "@/lib/checkin.functions";
 import { getDashboardData, toggleTask } from "@/lib/tasks.functions";
+import { CrisisResources } from "@/components/CrisisResources";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({ meta: [{ title: "Today — Reflex" }] }),

@@ -29,18 +29,20 @@ export const analyzeCheckin = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const entry = data.entry.trim();
-    const lower = entry.toLowerCase();
-    const isCrisis = CRISIS_KEYWORDS.some((k) => lower.includes(k));
+    const isCrisis = detectCrisis(entry);
 
     if (isCrisis) {
+      // SAFETY: skip AI task generation entirely. Crisis check-ins must not
+      // be reduced to "micro-actions" — surface human help instead.
       const { data: row, error } = await supabase
         .from("checkins")
         .insert({
           user_id: userId,
           entry_text: entry,
           is_crisis: true,
-          ai_summary: "We noticed something serious in what you shared.",
-          ai_insight: "Please reach out to a trained professional right now. You're not alone.",
+          primary_emotion: "distress",
+          ai_summary: "What you shared sounds really heavy, and we don't want you to face it alone.",
+          ai_insight: "A trained human is better equipped than Reflex for this moment. The resources below are free, confidential, and available right now.",
         })
         .select()
         .single();

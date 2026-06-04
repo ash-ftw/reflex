@@ -13,7 +13,11 @@ export const recordSafetyCheck = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const patch: Record<string, unknown> = { safety_responded_at: new Date().toISOString() };
+    const patch: {
+      safety_responded_at: string;
+      safety_status?: "safe" | "unsure" | "unsafe";
+      resources_helpful?: boolean;
+    } = { safety_responded_at: new Date().toISOString() };
     if (data.safety_status !== undefined) patch.safety_status = data.safety_status;
     if (data.resources_helpful !== undefined) patch.resources_helpful = data.resources_helpful;
     const { error } = await supabase

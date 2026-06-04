@@ -97,18 +97,7 @@ function Dashboard() {
       </section>
 
       {data.latestCheckin?.is_crisis && (
-        <section className="rounded-2xl border border-destructive/40 bg-destructive/10 p-6">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 shrink-0 text-destructive" />
-            <div>
-              <h3 className="font-display text-lg font-semibold">Please reach out for support</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                What you shared sounds serious. Reflex is not a crisis service. If you're in the US, call or text <strong className="text-foreground">988</strong>. Outside the US, find a helpline at{" "}
-                <a className="underline" href="https://findahelpline.com" target="_blank" rel="noreferrer">findahelpline.com</a>.
-              </p>
-            </div>
-          </div>
-        </section>
+        <CrisisResources summary={data.latestCheckin.ai_summary} />
       )}
 
       {data.latestCheckin && !data.latestCheckin.is_crisis && (

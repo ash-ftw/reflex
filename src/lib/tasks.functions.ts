@@ -2,6 +2,29 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
+export const recordSafetyCheck = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({
+      checkinId: z.string().uuid(),
+      safety_status: z.enum(["safe", "unsure", "unsafe"]).optional(),
+      resources_helpful: z.boolean().optional(),
+    }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const patch: Record<string, unknown> = { safety_responded_at: new Date().toISOString() };
+    if (data.safety_status !== undefined) patch.safety_status = data.safety_status;
+    if (data.resources_helpful !== undefined) patch.resources_helpful = data.resources_helpful;
+    const { error } = await supabase
+      .from("checkins")
+      .update(patch)
+      .eq("id", data.checkinId)
+      .eq("user_id", userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const toggleTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) =>

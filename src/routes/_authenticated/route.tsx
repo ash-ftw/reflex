@@ -1,6 +1,9 @@
 import { createFileRoute, Outlet, redirect, Link, useRouter } from "@tanstack/react-router";
-import { Brain, LayoutDashboard, History, LogOut } from "lucide-react";
+import { Brain, LayoutDashboard, History, LogOut, ShieldCheck } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { checkIsAdmin } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -14,6 +17,12 @@ export const Route = createFileRoute("/_authenticated")({
 
 function AuthedLayout() {
   const router = useRouter();
+  const fetchAdmin = useServerFn(checkIsAdmin);
+  const { data: adminData } = useQuery({
+    queryKey: ["is-admin"],
+    queryFn: () => fetchAdmin(),
+    staleTime: 60_000,
+  });
   async function signOut() {
     await supabase.auth.signOut();
     router.navigate({ to: "/" });
@@ -32,6 +41,7 @@ function AuthedLayout() {
           <nav className="flex items-center gap-1">
             <NavItem to="/dashboard" icon={LayoutDashboard} label="Today" />
             <NavItem to="/history" icon={History} label="History" />
+            {adminData?.isAdmin && <NavItem to="/admin" icon={ShieldCheck} label="Admin" />}
             <button
               onClick={signOut}
               className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm text-muted-foreground transition hover:bg-surface hover:text-foreground"

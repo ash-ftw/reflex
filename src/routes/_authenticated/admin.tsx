@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Loader2, ShieldAlert, ThumbsUp, ThumbsDown, Check, RotateCcw, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { getSafetyQueue, markCheckinReviewed } from "@/lib/admin.functions";
+import { getSafetyQueue, markCheckinReviewed, getAdminNotifications, markAdminNotificationsRead } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Admin — Reflex" }] }),

@@ -75,6 +75,10 @@ function AdminPage() {
         </p>
       </header>
 
+      <NotificationsPanel />
+
+
+
       <section className="grid gap-4 sm:grid-cols-4">
         <Stat label="Unsafe (12w)" value={String(data.totals.unsafe)} accent="destructive" />
         <Stat label="Unsure (12w)" value={String(data.totals.unsure)} />

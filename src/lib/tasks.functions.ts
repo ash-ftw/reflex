@@ -20,12 +20,28 @@ export const recordSafetyCheck = createServerFn({ method: "POST" })
     } = { safety_responded_at: new Date().toISOString() };
     if (data.safety_status !== undefined) patch.safety_status = data.safety_status;
     if (data.resources_helpful !== undefined) patch.resources_helpful = data.resources_helpful;
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from("checkins")
       .update(patch)
       .eq("id", data.checkinId)
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .select("id, safety_status, entry_text, ai_summary")
+      .maybeSingle();
     if (error) throw new Error(error.message);
+
+    if (updated?.safety_status === "unsafe") {
+      try {
+        const { notifyAdminsOfUnsafeCheckin } = await import("./admin-notify.server");
+        await notifyAdminsOfUnsafeCheckin({
+          checkinId: updated.id,
+          entryPreview: (updated.entry_text ?? "").slice(0, 300),
+          summary: updated.ai_summary,
+        });
+      } catch (e) {
+        console.error("[safety] notifyAdminsOfUnsafeCheckin failed", e);
+      }
+    }
+
     return { ok: true };
   });
 

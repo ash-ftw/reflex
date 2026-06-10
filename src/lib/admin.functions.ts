@@ -108,3 +108,54 @@ export const markCheckinReviewed = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const getAdminNotifications = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("admin_notifications")
+      .select(
+        "id, kind, read_at, created_at, checkin_id, checkins:checkin_id(entry_text, ai_summary, safety_status, user_id)",
+      )
+      .eq("admin_user_id", context.userId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) throw new Error(error.message);
+    const items = (data ?? []).map((n) => {
+      const c = n.checkins as { entry_text?: string; ai_summary?: string | null; safety_status?: string | null } | null;
+      return {
+        id: n.id,
+        kind: n.kind,
+        read_at: n.read_at,
+        created_at: n.created_at,
+        checkin_id: n.checkin_id,
+        entry_preview: (c?.entry_text ?? "").slice(0, 220),
+        summary: c?.ai_summary ?? null,
+        safety_status: c?.safety_status ?? null,
+      };
+    });
+    const unread = items.filter((i) => !i.read_at).length;
+    return { items, unread };
+  });
+
+export const markAdminNotificationsRead = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) =>
+    z.object({ ids: z.array(z.string().uuid()).max(200).optional(), all: z.boolean().optional() }).parse(i),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const now = new Date().toISOString();
+    let q = supabaseAdmin
+      .from("admin_notifications")
+      .update({ read_at: now })
+      .eq("admin_user_id", context.userId)
+      .is("read_at", null);
+    if (!data.all && data.ids?.length) q = q.in("id", data.ids);
+    const { error } = await q;
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });

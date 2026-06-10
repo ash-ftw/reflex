@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Loader2, ShieldAlert, ThumbsUp, ThumbsDown, Check, RotateCcw, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { getSafetyQueue, markCheckinReviewed } from "@/lib/admin.functions";
+import { getSafetyQueue, markCheckinReviewed, getAdminNotifications, markAdminNotificationsRead } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Admin — Reflex" }] }),
@@ -74,6 +74,10 @@ function AdminPage() {
           Check-ins flagged "unsafe" or "unsure" and aggregate helpfulness signal from the past 12 weeks.
         </p>
       </header>
+
+      <NotificationsPanel />
+
+
 
       <section className="grid gap-4 sm:grid-cols-4">
         <Stat label="Unsafe (12w)" value={String(data.totals.unsafe)} accent="destructive" />
@@ -243,5 +247,79 @@ function Legend({ color, label }: { color: string; label: string }) {
     <span className="inline-flex items-center gap-1.5">
       <span className={`h-3 w-3 rounded-sm ${color}`} /> {label}
     </span>
+  );
+}
+
+function NotificationsPanel() {
+  const fetchNotifs = useServerFn(getAdminNotifications);
+  const markRead = useServerFn(markAdminNotificationsRead);
+  const qc = useQueryClient();
+  const { data } = useQuery({
+    queryKey: ["admin-notifications"],
+    queryFn: () => fetchNotifs(),
+    refetchInterval: 60_000,
+  });
+  const mut = useMutation({
+    mutationFn: (vars: { ids?: string[]; all?: boolean }) => markRead({ data: vars }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-notifications"] }),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+
+  const items = data?.items ?? [];
+  const unread = data?.unread ?? 0;
+
+  return (
+    <section id="notifications" className="glass rounded-2xl p-6">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="font-display text-lg font-semibold">Inbox</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {unread > 0
+              ? `${unread} new unsafe check-in${unread === 1 ? "" : "s"} need a review.`
+              : "You're all caught up."}
+          </p>
+        </div>
+        {unread > 0 && (
+          <button
+            onClick={() => mut.mutate({ all: true })}
+            disabled={mut.isPending}
+            className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground hover:bg-surface-elevated"
+          >
+            Mark all read
+          </button>
+        )}
+      </div>
+
+      {items.length === 0 ? (
+        <p className="mt-4 text-sm text-muted-foreground">No notifications yet.</p>
+      ) : (
+        <ul className="mt-4 divide-y divide-border/60">
+          {items.slice(0, 8).map((n) => (
+            <li key={n.id} className="flex items-start gap-3 py-3">
+              <span
+                className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.read_at ? "bg-muted" : "bg-destructive"}`}
+                aria-hidden
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-muted-foreground">
+                  <span className="rounded-full bg-destructive/20 px-2 py-0.5 text-destructive">unsafe</span>
+                  <span>{new Date(n.created_at).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })}</span>
+                </div>
+                <p className="mt-1 truncate text-sm text-foreground">{n.entry_preview || "(no entry text)"}</p>
+              </div>
+              {!n.read_at && (
+                <button
+                  onClick={() => mut.mutate({ ids: [n.id] })}
+                  disabled={mut.isPending}
+                  className="shrink-0 rounded-full px-2 py-1 text-[11px] text-muted-foreground hover:bg-surface-elevated"
+                >
+                  Mark read
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

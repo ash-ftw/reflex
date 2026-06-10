@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_notifications: {
+        Row: {
+          admin_user_id: string
+          checkin_id: string
+          created_at: string
+          id: string
+          kind: string
+          read_at: string | null
+        }
+        Insert: {
+          admin_user_id: string
+          checkin_id: string
+          created_at?: string
+          id?: string
+          kind?: string
+          read_at?: string | null
+        }
+        Update: {
+          admin_user_id?: string
+          checkin_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          read_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_notifications_checkin_id_fkey"
+            columns: ["checkin_id"]
+            isOneToOne: false
+            referencedRelation: "checkins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       checkins: {
         Row: {
           ai_insight: string | null
